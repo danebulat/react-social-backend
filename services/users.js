@@ -1,6 +1,64 @@
 import * as db    from '../services/db.js';
 
 /* ---------------------------------------- */
+/* Check if user exists                     */
+/* ---------------------------------------- */
+
+async function userExists(userId) {
+  const sql = `SELECT COUNT(id) AS total FROM users WHERE id = ${userId}`;
+  const result = await db.query(sql);
+  return Number(result[0].total) > 0;
+}
+
+/* ---------------------------------------- */
+/* Get user followings                      */
+/* ---------------------------------------- */
+
+async function getUserFollowingIds(userId) {
+  const sql = `
+    SELECT 
+      users.id FROM users 
+    JOIN 
+      followers_followings ON users.id = followers_followings.following_user_id 
+    WHERE 
+      followers_followings.follower_user_id = ${userId}
+  `;
+
+  const rows = await db.query(sql);
+  return rows.map(({ id }) => Number(id));
+}
+
+/* ---------------------------------------- */
+/* Follow user                              */
+/* ---------------------------------------- */
+
+async function followUser(currentUserId, followId) {
+  const sql = `
+    INSERT INTO 
+      followers_followings (follower_user_id, following_user_id)
+    VALUES
+      (${currentUserId}, ${followId})`;
+
+  const result = await db.query(sql);
+  return result;
+}
+
+/* ---------------------------------------- */
+/* Unfollow user                              */
+/* ---------------------------------------- */
+
+async function unfollowUser(currentUserId, followId) {
+  const sql = `
+    DELETE FROM 
+      followers_followings 
+    WHERE 
+      follower_user_id = ${currentUserId} AND following_user_id = ${followId}`;
+
+  const result = await db.query(sql);
+  return result;
+}
+
+/* ---------------------------------------- */
 /* Return user fields user can update       */
 /* ---------------------------------------- */
 
@@ -62,4 +120,8 @@ function getUpdateUserSql(data, userId, newPassword = null) {
 
 export {
   getUpdateUserSql,
+  getUserFollowingIds,
+  userExists,
+  followUser,
+  unfollowUser,
 };

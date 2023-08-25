@@ -2,9 +2,31 @@ import express    from 'express';
 import bcrypt     from 'bcrypt';
 import { verify } from './auth.js';
 import * as db    from '../services/db.js';
-import { getUpdateUserSql } from '../services/users.js';
+import { 
+  getUpdateUserSql, 
+  userExists,
+  getUserFollowingIds,
+  followUser,
+  unfollowUser } from '../services/users.js';
 
 const router = express.Router();
+
+/* ---------------------------------------- */
+/* GET /api/users/:id                       */
+/* ---------------------------------------- */
+
+router.get('/:id', async (req, res, next) => {
+  try {
+    const sql = `SELECT * FROM users WHERE id = ${req.params.id}`;
+    const row = await db.query(sql);
+    const {password, is_admin, created_at, updated_at, ...other} = row[0];
+    res.status(200).json(other);
+  }
+  catch (err) {
+    console.log(err);
+    next(err);
+  }
+});
 
 /* ---------------------------------------- */
 /* PUT /api/users/:id                       */
@@ -55,10 +77,11 @@ router.put('/:id', verify, async (req, res, next) => {
 /* ---------------------------------------- */
 
 router.delete('/:userId', verify, async (req, res, next) => {
+  console.log(req.user);
   if (Number(req.user.id) === Number(req.params.userId) || req.user.isAdmin) {
 
     try {
-      const sql = `DELETE FROM users WHERE id = ${req.user.id}`;
+      const sql = `DELETE FROM users WHERE id = ${req.params.userId}`;
       await db.query(sql);
       res.status(200).json('User has been deleted');
     }
@@ -95,6 +118,86 @@ router.get('/', async (_req, res, next) => {
   catch (err) {
     console.log(`Error while getting users ${err.message}`);
     next(err);
+  }
+});
+
+/* ---------------------------------------- */
+/* PUT /:id/follow    Follow user           */
+/* ---------------------------------------- */
+
+router.put('/:id/follow', verify, async (req, res, next) => {
+  const paramId = Number(req.params.id);
+  const userId = Number(req.user.id);
+
+  if (userId !== paramId) {
+    try {
+      //check if paramId user exists
+      const exists = await userExists(req.params.id);
+      if (!exists) {
+        return res.status(404).json('User to follow not found');
+      }
+
+      //check if current user already follows the user
+      const followingIds = await getUserFollowingIds(req.user.id);
+      if (followingIds.includes(paramId)) {
+        return res.status(403).json('You already follow this user');
+      }
+
+      //follow user in db
+      const result = await followUser(userId, paramId);
+      if (result.affectedRows === 1) {
+        res.status(200).json('User has been followed');
+      } else {
+        res.status(500).json('Error following user');
+      }
+    }
+    catch (err) {
+      console.error(err);
+      next(err);
+    }
+  }
+  else {
+    res.status(403).json('You cannot follow yourself');
+  }
+});
+
+/* ---------------------------------------- */
+/* PUT /:id/unfollow    Follow user         */
+/* ---------------------------------------- */
+
+router.put('/:id/unfollow', verify, async (req, res, next) => {
+  const paramId = Number(req.params.id);
+  const userId = Number(req.user.id);
+
+  if (userId !== paramId) {
+    try {
+      //check if paramId user exists
+      const exists = await userExists(req.params.id);
+      if (!exists) {
+        return res.status(404).json('User to unfollow not found');
+      }
+
+      //check if current user follows the user
+      const followingIds = await getUserFollowingIds(req.user.id);
+      if (!followingIds.includes(paramId)) {
+        return res.status(403).json('You do not follow this user');
+      }
+
+      //follow user in db
+      const result = await unfollowUser(userId, paramId);
+      if (result.affectedRows === 1) {
+        res.status(200).json('User has been unfollowed');
+      } else {
+        res.status(500).json('Error unfollowing user');
+      }
+    }
+    catch (err) {
+      console.error(err);
+      next(err);
+    }
+  }
+  else {
+    res.status(403).json('You cannot unfollow yourself');
   }
 });
 
