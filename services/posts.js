@@ -7,6 +7,22 @@ async function postExists(postId) {
 }
 
 /* -------------------------------------------------- */
+/* Get post                                           */
+/* -------------------------------------------------- */
+
+async function getPostById(postId) {
+  const sql = `SELECT * FROM posts WHERE id = ${postId}`;
+  const row = await db.query(sql);
+  return row[0];
+}
+
+async function getUserPosts(userId) {
+  const sql = `SELECT * FROM posts WHERE user_id = ${userId}`;
+  const rows = await db.query(sql);
+  return rows;
+}
+
+/* -------------------------------------------------- */
 /* Insert post                                        */
 /* -------------------------------------------------- */
 
@@ -25,12 +41,6 @@ async function insertAndGetNewPost(req) {
     `SELECT * FROM posts WHERE id = ${result.insertId}`);
   
   return rows[0];
-}
-
-async function getPostById(postId) {
-  const sql = `SELECT * FROM posts WHERE id = ${postId}`;
-  const row = await db.query(sql);
-  return row[0];
 }
 
 /* -------------------------------------------------- */
@@ -89,10 +99,53 @@ async function deletePost(postId) {
   await db.query(sql);
 }
 
+/* -------------------------------------------------- */
+/* Like and dislike                                   */
+/* -------------------------------------------------- */
+
+async function likePost(userId, postId) {
+  const sql = `
+    INSERT INTO 
+      user_post_likes (user_id, post_id)
+    VALUES 
+      (${userId}, ${postId});
+  `;
+  await db.query(sql);
+}
+
+async function dislikePost(userId, postId) {
+  const sql = `
+    DELETE FROM  
+      user_post_likes 
+    WHERE 
+      user_id = ${userId} AND post_id = ${postId}
+  `;
+  await db.query(sql);
+}
+
+async function getLikedPostIds(userId) {
+  const sql = `
+    SELECT 
+      id FROM posts 
+    INNER JOIN 
+      user_post_likes
+    ON 
+      posts.id = user_post_likes.post_id 
+    WHERE 
+      user_post_likes.user_id = ${userId};`;
+  
+  const rows = await db.query(sql);
+  return rows.map(({ id }) => id);
+}
+
 export {
   insertAndGetNewPost,
   getPostById,
   updatePost,
   postExists,
   deletePost,
+  getLikedPostIds,
+  likePost,
+  dislikePost,
+  getUserPosts,
 };

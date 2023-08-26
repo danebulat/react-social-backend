@@ -6,7 +6,13 @@ import {
   getPostById,
   updatePost,
   postExists,
-  deletePost } from '../services/posts.js';
+  deletePost,
+  getLikedPostIds,
+  likePost,
+  dislikePost,
+  getUserPosts } from '../services/posts.js';
+import { 
+  getUserFollowingIds } from '../services/users.js';
 
 const router = express.Router();
 
@@ -86,6 +92,95 @@ router.delete('/:id', verify, async (req, res, next) => {
   }
   catch (err) {
     console.log(err);
+    next(err);
+  }
+});
+
+/* ---------------------------------------- */
+/* PUT /:id/ike   Like/Dislike post         */
+/* ---------------------------------------- */
+
+router.put('/:id/like', verify, async (req, res, next) => {
+  try {
+    const userId = Number(req.user.id);
+    const postId = Number(req.params.id);
+    const exists = postExists(postId);
+  
+    //check if post exists
+    if (!exists) {
+      res.status(404).json('Post not found');
+    }
+
+    //check if user already likes this post 
+    const likedPostIds = await getLikedPostIds(userId);
+    
+    if (!likedPostIds.includes(postId)) {
+
+      //like post
+      await likePost(userId, postId);
+      res.status(200).json('Post has been liked');
+    }
+    else {
+      //dislike post
+      await dislikePost(userId, postId);
+      res.status(200).json('Post has been disliked');
+    }
+  }
+  catch (err) {
+    console.error(err);
+    next(err);
+  }
+});
+
+/* ---------------------------------------- */
+/* GET /timeline/all   Get timeline posts   */
+/* ---------------------------------------- */
+
+router.get('/timeline/all', verify, async (req, res, next) => {
+  try {
+    const userId = Number(req.user.id);
+    const userFollowingIds = await getUserFollowingIds(userId);
+    let allPosts = [];
+
+    //get user posts
+    const userPosts = await getUserPosts(userId);
+    allPosts = allPosts.concat(userPosts);
+
+    //promises to get posts from all followed users
+    const promises = userFollowingIds.map(friendId => {
+      return getUserPosts(friendId);
+    });
+    
+    //append friend posts to all posts array
+    const friendPosts = await Promise.all(promises);
+    friendPosts.forEach(ps => {
+      allPosts = allPosts.concat(ps);
+    });
+
+    res.status(200).json(allPosts);
+  }
+  catch (err) {
+    console.error(err);
+    next(err);
+  }
+});
+
+/* ---------------------------------------- */
+/* GET /:id   GET Post                      */
+/* ---------------------------------------- */
+
+router.get('/:id', async (req, res, next) => {
+  try {
+    const postId = Number(req.params.id);
+    const exists = await postExists(postId);
+    if (!exists) {
+      return res.status(404).json('Post not found');
+    }
+    const post = await getPostById(postId);
+    res.status(200).json(post);
+  }
+  catch (err) {
+    console.error(err);
     next(err);
   }
 });
