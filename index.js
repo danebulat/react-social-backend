@@ -9,6 +9,7 @@ import { fileURLToPath }  from 'url';
 
 import authRouter from './routes/auth.js';
 import userRouter from './routes/users.js';
+import postRouter from './routes/posts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -33,8 +34,9 @@ router.use(express.static(
 /* Pass router to subdir                    */
 /* ---------------------------------------- */
 
-app.use(`${config.subdir}/api`, authRouter);
+app.use(`${config.subdir}/api`,       authRouter);
 app.use(`${config.subdir}/api/users`, userRouter);
+app.use(`${config.subdir}/api/posts`, postRouter);
 app.use(config.subdir, router);
 
 /* ---------------------------------------- */

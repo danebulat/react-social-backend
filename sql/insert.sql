@@ -15,3 +15,23 @@ VALUES
   (2, 4),   -- ross follows alice
   (4, 1);   -- alice follows dane
 
+-- create some posts 
+INSERT INTO posts (`user_id`, `desc`, `img`)
+VALUES (9,  'Text for this post.', 'post1.png'),
+       (9,  'Some more text.',     'post2.png'),
+       (10, 'New text for post.',  'post3.png'),
+       (11, 'Another post.',       'post3.png');
+
+-- like some posts 
+INSERT INTO user_post_likes (`user_id`, `post_id`)
+VALUES 
+  (10, 1),  -- alice likes dane's 1st post
+  (10, 2),  -- alice likes dane's 2nd post
+  (9,  3);  -- dane likes alice's 1st post
+
+-- select dane's liked posts (user id 9)
+SELECT * FROM posts 
+INNER JOIN user_post_likes
+ON posts.id = user_post_likes.post_id 
+WHERE user_post_likes.user_id = 9;
+

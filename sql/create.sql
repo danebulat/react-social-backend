@@ -52,6 +52,37 @@ CREATE TABLE IF NOT EXISTS `followers_followings` (
 );
 
 
+-- Create posts table
+CREATE TABLE IF NOT EXISTS `posts` (
+  `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id`       INT UNSIGNED NOT NULL,
+  `desc`          VARCHAR(512),
+  `img`           VARCHAR(512),
+  `created_at`    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY `fk_posts_user_id` (`user_id`) 
+    REFERENCES `users` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+-- Create junction table between users and posts 
+CREATE TABLE IF NOT EXISTS `user_post_likes` (
+  `user_id` INT UNSIGNED NOT NULL,
+  `post_id` INT UNSIGNED NOT NULL,
+
+  PRIMARY KEY (`user_id`, `post_id`),
+
+  CONSTRAINT `Constr_user_post_likes_user_fk`
+    FOREIGN KEY `user_fk` (`user_id`) REFERENCES `users` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+  CONSTRAINT `Constr_user_post_likes_post_fk`
+    FOREIGN KEY `post_fk` (`post_id`) REFERENCES `posts` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 -- find a user followers
 DELIMITER $$
 CREATE PROCEDURE IF NOT EXISTS find_user_followers (IN userId INT UNSIGNED)
