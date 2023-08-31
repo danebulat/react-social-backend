@@ -23,6 +23,15 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('common'));
 
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      "img-src": ["'self'", "https: data:", "data: blob:"]
+    }
+  })
+);
+
 //TODO: verify user before upload
 //TODO: put file upload in separate module
 const storage = multer.diskStorage({
@@ -52,7 +61,7 @@ router.post('/api/upload', upload.single("file"), (req, res) => {
 /* ---------------------------------------- */
 
 //TODO: builddir/subdir
-app.use('/images', express.static(
+app.use(`${config.subdir}/images`, express.static(
   path.join(__dirname, 'public/uploads')));
 
 router.use(express.static(
