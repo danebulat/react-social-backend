@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import { escape } from 'mysql2';
 import config from '../config.js';
 
 /* execute a query and return results */
@@ -12,7 +13,10 @@ async function query(sql, params) {
 
 /* check for duplicate username */
 async function isDuplicateUsername(username) {
-  const sql = `SELECT COUNT(id) AS count FROM users WHERE username = '${username}'`;
+  const sql = `
+    SELECT COUNT(id) AS count 
+    FROM users WHERE username = ${escape(username)}
+  `;
   const result = await query(sql);
   return Number(result[0].count) === 0 ? false : true;
 }

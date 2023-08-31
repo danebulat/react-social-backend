@@ -1,4 +1,5 @@
 import * as db    from '../services/db.js';
+import { escape } from 'mysql2';
 
 async function postExists(postId) {
   const sql = `SELECT COUNT(id) AS total FROM posts WHERE id = ${postId}`;
@@ -17,12 +18,16 @@ async function getPostById(postId) {
   //get array of like ids for post
   const sql2 = `
   SELECT 
-    COUNT(post_id) as total 
+    user_id
   FROM 
     user_post_likes 
   WHERE 
     post_id = ${postId}
   `;
+
+  const rows = await db.query(sql2);
+  const likeIds = rows.map(r => r.user_id);
+  row[0].likeIds = likeIds;
 
   return row[0];
 }
@@ -73,13 +78,14 @@ async function insertAndGetNewPost(req) {
     INSERT INTO posts 
       (\`user_id\`, \`desc\`, \`img\`)
     VALUES 
-      (${req.user.id}, '${req.body.desc}', '${img}')`;
+      (${req.user.id}, ${escape(req.body.desc)}, ${escape(img)})`;
 
   const result = await db.query(sql);
   const rows = await db.query(
     `SELECT * FROM posts WHERE id = ${result.insertId}`);
   
   rows[0].likeIds = [];
+  rows[0].likes = 0;
   return rows[0];
 }
 
@@ -113,7 +119,7 @@ function getUpdatePostSql(data, postId) {
 
   //quotes needed around string value
   kvMap.forEach((value, key) => {
-    sql += `\`${key}\` = '${value}', `; 
+    sql += `\`${key}\` = ${escape(value)}, `; 
   });
 
   //remove last comma

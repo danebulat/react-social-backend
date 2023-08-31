@@ -1,4 +1,5 @@
 import * as db    from '../services/db.js';
+import { escape } from 'mysql2';
 
 /* ---------------------------------------- */
 /* Get user followings                      */
@@ -11,7 +12,7 @@ async function getUserByUsername(username) {
     FROM 
       users 
     WHERE 
-      username = '${username}'
+      username = ${escape(username)}
   `;
 
   const result = await db.query(sql);
@@ -141,7 +142,7 @@ function getUpdateUserSql(data, userId, newPassword = null) {
     }
     else {
       //quotes needed around string value
-      sql += `\`${key}\` = '${value}', `; 
+      sql += `\`${key}\` = ${escape(value)}, `; 
     }
   });
 

@@ -4,6 +4,7 @@ import bcrypt  from 'bcrypt';
 import config  from '../config.js';
 import * as db from '../services/db.js';
 import { getUserFollowingIds } from '../services/users.js';
+import { escape } from 'mysql2';
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ async function performLogin(email, password) {
       profile_picture, cover_picture, 
       is_admin, created_at 
     FROM users 
-    WHERE email='${email}'`);
+    WHERE email=${escape(email)}`);
 
   if (row.length) {
 
@@ -60,7 +61,7 @@ async function performLogin(email, password) {
     //insert refresh token
     const result = await db.query(`
       INSERT INTO jwt_refresh_tokens (user_id, refresh_token) 
-      VALUES (${user.id}, '${refreshToken}')`);
+      VALUES (${user.id}, ${escape(refreshToken)})`);
 
     if (!result.affectedRows) {
       return null;
@@ -127,7 +128,7 @@ router.post("/refresh", async (req, res) => {
   //check if refresh token is valid (in db)
   const row = await db.query(`
     SELECT * FROM jwt_refresh_tokens
-    WHERE refresh_token='${refreshToken}'
+    WHERE refresh_token=${escape(refreshToken)}
   `);
 
   if (!row.length)
@@ -141,7 +142,7 @@ router.post("/refresh", async (req, res) => {
       //delete old refresh token
       await db.query(`
         DELETE FROM jwt_refresh_tokens 
-        WHERE refresh_token='${refreshToken}'
+        WHERE refresh_token=${escape(refreshToken)}
       `);
 
       //generate new tokens
@@ -151,7 +152,7 @@ router.post("/refresh", async (req, res) => {
       //persist new refresh token
       await db.query(`
         INSERT INTO jwt_refresh_tokens (user_id, refresh_token)
-        VALUES (${user.id}, '${newRefreshToken}')
+        VALUES (${user.id}, ${escape(newRefreshToken)})
       `);
       
       //return new access and refresh tokens
@@ -186,7 +187,7 @@ router.post('/register', async (req, res, next) => {
     const hashPassword = bcrypt.hashSync(password, 10);
     const sql = `
       INSERT INTO users (username, email, password)
-      VALUES ('${username}', '${email}', '${hashPassword}')`;
+      VALUES (${escape(username)}, ${escape(email)}, ${escape(hashPassword)})`;
 
     const result = await db.query(sql);
     if (result.affectedRows === 0) {
@@ -245,7 +246,7 @@ router.post('/logout', verify, async (req, res) => {
     const result = await db.query(`
       DELETE FROM jwt_refresh_tokens 
       WHERE user_id=${user.id} AND 
-            refresh_token='${refreshToken}'
+            refresh_token=${escape(refreshToken)}
       `);
     
     const message = result.affectedRows

@@ -9,6 +9,7 @@ import {
   getUserFollowings,
   followUser,
   unfollowUser } from '../services/users.js';
+import { escape } from 'mysql2';
 
 const router = express.Router();
 
@@ -17,14 +18,13 @@ const router = express.Router();
 /* ---------------------------------------- */
 
 router.get('/', async (req, res, next) => {
-  console.log(`FETCH USER`);
 
   const userId = req.query.userId;
   const username = req.query.username;
   try {
     const sql = userId
       ? `SELECT * FROM \`users\` WHERE \`id\` = ${userId}`
-      : `SELECT * FROM \`users\` WHERE \`username\` = '${username}'`;
+      : `SELECT * FROM \`users\` WHERE \`username\` = ${escape(username)}`;
 
     const row = await db.query(sql);
     if (row.length === 0) {
@@ -141,14 +141,21 @@ router.get('/all', async (_req, res, next) => {
   }
 });
 
-/* ---------------------------------------------- */
-/* GET /api/friends/:userId   Get following users */
-/* ---------------------------------------------- */
+/* ---------------------------------------------------- */
+/* GET /api/users/friends/:userId   Get following users */
+/* ---------------------------------------------------- */
 
 router.get('/friends/:userId', async (req, res, next) => {
   try {
     const rows = await getUserFollowings(req.params.userId);
-    res.status(200).json(rows);
+
+    const users = rows.map(user => ({
+      userId: user.id,
+      username: user.username,
+      profilePicture: user.profile_picture})
+    );
+
+    res.status(200).json(users);
   }
   catch (err) {
     console.log(`Error while getting users ${err.message}`);
