@@ -4,6 +4,7 @@ import cors    from 'cors';
 import path    from 'path';
 import helmet  from 'helmet';
 import morgan  from 'morgan';
+import multer  from 'multer';
 import config  from './config.js';
 import { fileURLToPath }  from 'url';
 
@@ -22,9 +23,37 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('common'));
 
+//TODO: verify user before upload
+//TODO: put file upload in separate module
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, './public/uploads')
+  },
+  filename: (req, file, cb) => {
+    const fileName = Date.now() + file.originalname;
+    req.newFilename = fileName;
+    cb(null, fileName);
+  },
+});
+
+const upload = multer({storage});
+
+router.post('/api/upload', upload.single("file"), (req, res) => {
+  try {
+    return res.status(200).json({ fileName: req.newFilename });
+  }
+  catch (err) {
+    console.log(err);
+  }
+});
+
 /* ---------------------------------------- */
 /* Public directory                         */
 /* ---------------------------------------- */
+
+//TODO: builddir/subdir
+app.use('/images', express.static(
+  path.join(__dirname, 'public/uploads')));
 
 router.use(express.static(
   path.resolve(path.join(__dirname, `/${config.builddir}`)))

@@ -3,6 +3,7 @@ import jwt     from 'jsonwebtoken';
 import bcrypt  from 'bcrypt';
 import config  from '../config.js';
 import * as db from '../services/db.js';
+import { getUserFollowingIds } from '../services/users.js';
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ function comparePassword(password, hashPassword) {
   return bcrypt.compareSync(password, hashPassword);
 }
 
-async function performLogin(username, email, password) {
+async function performLogin(email, password) {
 
   //fetch user
   const row = await db.query(`
@@ -39,9 +40,12 @@ async function performLogin(username, email, password) {
       profile_picture, cover_picture, 
       is_admin, created_at 
     FROM users 
-    WHERE username='${username}' AND email='${email}'`);
+    WHERE email='${email}'`);
 
   if (row.length) {
+
+    //attach following user ids
+    const followingIds = await getUserFollowingIds(row[0].id);
 
     //compare passwords
     if (!comparePassword(password, row[0].password)) {
@@ -71,6 +75,7 @@ async function performLogin(username, email, password) {
       coverPicture:   user.cover_picture,
       isAdmin:        user.is_admin,
       createdAt:      user.created_at,
+      followingIds,
       accessToken,
       refreshToken,
     };
@@ -119,7 +124,7 @@ router.post("/refresh", async (req, res) => {
   if (!refreshToken) 
     return res.status(401).json('You are not authenticated!');
 
-  //check if refresh token is valid
+  //check if refresh token is valid (in db)
   const row = await db.query(`
     SELECT * FROM jwt_refresh_tokens
     WHERE refresh_token='${refreshToken}'
@@ -183,15 +188,21 @@ router.post('/register', async (req, res, next) => {
       INSERT INTO users (username, email, password)
       VALUES ('${username}', '${email}', '${hashPassword}')`;
 
-    if (await db.query(sql).affectedRows === 0) {
+    const result = await db.query(sql);
+    if (result.affectedRows === 0) {
       throw new Error("Error adding user");
     }
 
-    const user = await performLogin(username, email, password);
+    const user = await performLogin(email, password);
+    console.log('USER:');
+    console.log(user);
+
     if (user) {
-      res.status(200).json(user);
+      console.log('SUCCESS');
+      return res.status(200).json(user);
     } else {
-      res.status(500).json({ error: 'Registration error' });
+      console.log('FAILURE');
+      return res.status(500).json({ error: 'Registration error' });
     }
   }
   catch (err) {
@@ -206,8 +217,8 @@ router.post('/register', async (req, res, next) => {
 
 router.post('/login', async (req, res, next) => {
   try {
-    const {username, email, password} = req.body;
-    const result = await performLogin(username, email, password);
+    const {email, password} = req.body;
+    const result = await performLogin(email, password);
     if (result) {
       res.status(200).json(result);
     } else {

@@ -6,6 +6,7 @@ import {
   getUpdateUserSql, 
   userExists,
   getUserFollowingIds,
+  getUserFollowings,
   followUser,
   unfollowUser } from '../services/users.js';
 
@@ -15,11 +16,27 @@ const router = express.Router();
 /* GET /api/users/:id                       */
 /* ---------------------------------------- */
 
-router.get('/:id', async (req, res, next) => {
+router.get('/', async (req, res, next) => {
+  console.log(`FETCH USER`);
+
+  const userId = req.query.userId;
+  const username = req.query.username;
   try {
-    const sql = `SELECT * FROM users WHERE id = ${req.params.id}`;
+    const sql = userId
+      ? `SELECT * FROM \`users\` WHERE \`id\` = ${userId}`
+      : `SELECT * FROM \`users\` WHERE \`username\` = '${username}'`;
+
     const row = await db.query(sql);
+    if (row.length === 0) {
+      return res.status(404).json('User not found');
+    }
+
     const {password, is_admin, created_at, updated_at, ...other} = row[0];
+
+    //get following ids
+    const followingIds = await getUserFollowingIds(row[0].id);
+    other.followingIds = followingIds;
+
     res.status(200).json(other);
   }
   catch (err) {
@@ -96,12 +113,14 @@ router.delete('/:userId', verify, async (req, res, next) => {
 });
 
 /* ---------------------------------------- */
-/* GET /api/users                           */
+/* GET /api/users/all                       */
 /* ---------------------------------------- */
 
-router.get('/', async (_req, res, next) => {
+router.get('/all', async (_req, res, next) => {
   try {
-    const sql = 'SELECT id, username, created_at FROM users';
+    console.log('FETCH ALL USERS');
+
+    const sql = 'SELECT id, username, profile_picture, created_at FROM users';
     const rows = await db.query(sql);
     const data = rows === [] ? [] : rows;
 
@@ -109,11 +128,27 @@ router.get('/', async (_req, res, next) => {
       return {
         userId: user.id,
         username: user.username,
+        profilePicture: user.profile_picture,
         createdAt: user.created_at,
       }
     }); 
 
     res.status(200).json(users);
+  }
+  catch (err) {
+    console.log(`Error while getting users ${err.message}`);
+    next(err);
+  }
+});
+
+/* ---------------------------------------------- */
+/* GET /api/friends/:userId   Get following users */
+/* ---------------------------------------------- */
+
+router.get('/friends/:userId', async (req, res, next) => {
+  try {
+    const rows = await getUserFollowings(req.params.userId);
+    res.status(200).json(rows);
   }
   catch (err) {
     console.log(`Error while getting users ${err.message}`);

@@ -1,3 +1,5 @@
+-- Example syntax only
+
 -- create some users
 INSERT INTO users (username, email, password)
 VALUES ('dane',  'dane@email.com',  'pass'),

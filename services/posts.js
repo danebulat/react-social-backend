@@ -13,13 +13,52 @@ async function postExists(postId) {
 async function getPostById(postId) {
   const sql = `SELECT * FROM posts WHERE id = ${postId}`;
   const row = await db.query(sql);
+
+  //get array of like ids for post
+  const sql2 = `
+  SELECT 
+    COUNT(post_id) as total 
+  FROM 
+    user_post_likes 
+  WHERE 
+    post_id = ${postId}
+  `;
+
   return row[0];
 }
 
 async function getUserPosts(userId) {
-  const sql = `SELECT * FROM posts WHERE user_id = ${userId}`;
-  const rows = await db.query(sql);
+  const sql = `
+    SELECT 
+      posts.*, COUNT(user_post_likes.post_id) AS likes
+    FROM 
+      posts 
+    LEFT JOIN user_post_likes 
+      ON posts.id = user_post_likes.post_id 
+    WHERE 
+      posts.user_id = ${userId} 
+    GROUP BY 
+      posts.id;
+  `;
+  let rows = await db.query(sql); 
+
+  const promises = rows.map(async p => {
+    const likeIds = await getPostLikeIds(p.id)
+    return {...p, likeIds};
+  });
+
+  rows = await Promise.all(promises);
   return rows;
+}
+
+async function getPostLikeIds(postId) {
+  const sql = `
+    SELECT user_id 
+    FROM user_post_likes 
+    WHERE post_id = ${postId}
+  `;
+  const rows = await db.query(sql);
+  return rows.map(({ user_id }) => user_id);
 }
 
 /* -------------------------------------------------- */
@@ -40,6 +79,7 @@ async function insertAndGetNewPost(req) {
   const rows = await db.query(
     `SELECT * FROM posts WHERE id = ${result.insertId}`);
   
+  rows[0].likeIds = [];
   return rows[0];
 }
 

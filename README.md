@@ -93,7 +93,7 @@ In order to access endpoints that require a JWT access token, add an
 authorization header in your request by setting the following key value 
 pair:
 
-**Key:** `authorization`
+**Key:** `authorization`<br>
 **Value:** `Bearer <paste your access token>` 
 
 ## API Endpoints

@@ -1,6 +1,5 @@
 import express    from 'express';
 import { verify } from './auth.js';
-import * as db    from '../services/db.js';
 import { 
   insertAndGetNewPost,
   getPostById,
@@ -12,6 +11,7 @@ import {
   dislikePost,
   getUserPosts } from '../services/posts.js';
 import { 
+  getUserByUsername,
   getUserFollowingIds } from '../services/users.js';
 
 const router = express.Router();
@@ -136,7 +136,7 @@ router.put('/:id/like', verify, async (req, res, next) => {
 /* GET /timeline/all   Get timeline posts   */
 /* ---------------------------------------- */
 
-router.get('/timeline/all', verify, async (req, res, next) => {
+router.get('/timeline/:userId', verify, async (req, res, next) => {
   try {
     const userId = Number(req.user.id);
     const userFollowingIds = await getUserFollowingIds(userId);
@@ -158,6 +158,26 @@ router.get('/timeline/all', verify, async (req, res, next) => {
     });
 
     res.status(200).json(allPosts);
+  }
+  catch (err) {
+    console.error(err);
+    next(err);
+  }
+});
+
+/* --------------------------------------------- */
+/* GET /profile/:username   Get all user posts   */
+/* --------------------------------------------- */
+
+router.get('/profile/:username', async (req, res, next) => {
+  try {
+    const username = req.params.username;
+    const user = await getUserByUsername(username);
+    const userId = user.id;
+
+    //get user posts
+    const userPosts = await getUserPosts(userId);
+    res.status(200).json(userPosts);
   }
   catch (err) {
     console.error(err);

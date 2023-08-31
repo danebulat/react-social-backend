@@ -1,6 +1,7 @@
 .env
 misc
 build-dev
+public
 
 # Logs
 logs

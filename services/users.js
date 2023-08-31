@@ -1,6 +1,24 @@
 import * as db    from '../services/db.js';
 
 /* ---------------------------------------- */
+/* Get user followings                      */
+/* ---------------------------------------- */
+
+async function getUserByUsername(username) {
+  const sql = `
+    SELECT
+      id, username 
+    FROM 
+      users 
+    WHERE 
+      username = '${username}'
+  `;
+
+  const result = await db.query(sql);
+  return result[0];
+}
+
+/* ---------------------------------------- */
 /* Check if user exists                     */
 /* ---------------------------------------- */
 
@@ -26,6 +44,22 @@ async function getUserFollowingIds(userId) {
 
   const rows = await db.query(sql);
   return rows.map(({ id }) => Number(id));
+}
+
+async function getUserFollowings(userId) {
+  const sql = `
+    SELECT 
+      users.id, users.username, users.profile_picture 
+    FROM 
+      users 
+    JOIN 
+      followers_followings ON users.id = followers_followings.following_user_id 
+    WHERE 
+      followers_followings.follower_user_id = ${userId}
+  `;
+
+  const rows = await db.query(sql);
+  return rows;
 }
 
 /* ---------------------------------------- */
@@ -119,8 +153,10 @@ function getUpdateUserSql(data, userId, newPassword = null) {
 }
 
 export {
+  getUserByUsername,
   getUpdateUserSql,
   getUserFollowingIds,
+  getUserFollowings,
   userExists,
   followUser,
   unfollowUser,
